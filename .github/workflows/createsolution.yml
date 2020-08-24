@@ -1,0 +1,5 @@
+name: Creating Solution in repo
+
+on:
+  repository_dispatch:
+    types: [create_solution_scenario]

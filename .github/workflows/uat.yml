@@ -1,0 +1,63 @@
+name: Submitting Solution to UAT
+
+on:
+  repository_dispatch:
+    types: [uat_scenario]
+
+jobs:
+  build:
+
+    env:
+     SolutionName: navb_test
+
+    runs-on: self-hosted
+
+    steps:
+    - name: 'clone this repo'
+      uses: actions/checkout@v2-beta
+
+    - name: 'Power Actions Repo Checkout'
+      uses: actions/checkout@v2-beta
+      with:
+        repository: poweralm/PowerActions
+        ref: refs/heads/master
+        token: ${{ secrets.PP_ACTION_SEC }}
+        path: .github/actions/
+
+    - name: 'Export And Unpack the Power Solution'
+      uses: ./.github/actions
+      with:
+        actionName: 'ExportUnpack'
+        connectionString: 'AuthType=Office365;Username=meganb@pplatform.onmicrosoft.com;Password=pass#word3;Url=https://githubdevops.crm.dynamics.com'
+        solutionName: ${{env.SolutionName}}
+        packageType: 'Unmanaged'
+
+    - name: "commit using script"
+      # working-directory: "./.repo"
+      run: |
+       $SolutionName= echo ${{env.SolutionName}}
+       git add --all $SolutionName/
+       git commit -m "Committing unpacked solution"
+       git push --force
+
+    - name: 'Pack and Import the Solution'
+      uses: ./.github/actions
+      with:
+        actionName: 'PackImport'
+        connectionString: 'AuthType=Office365;Username=admin@CRM647220.onmicrosoft.com;Password=6FpApp831H;url=https://crm647220.crm.dynamics.com'
+        packageType: 'Unmanaged'
+        unpackedFilesPath: ${{env.SolutionName}}
+
+    - name: 'Export the solution as managed'
+      uses: ./.github/actions
+      with:
+        actionName: 'ExportUnpack'
+        connectionString: 'AuthType=Office365;Username=admin@CRM647220.onmicrosoft.com;Password=6FpApp831H;url=https://crm647220.crm.dynamics.com'
+        solutionName: ${{env.SolutionName}}
+        packageType: 'Managed'
+
+    - name: 'Upload the solution as managed to artifact'
+      uses: actions/upload-artifact@v2
+      with:
+        name: ${{env.SolutionName}}
+        path: 'exported\${{env.SolutionName}}.zip'

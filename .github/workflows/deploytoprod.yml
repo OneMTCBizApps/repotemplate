@@ -1,0 +1,5 @@
+name: Deploying Solution to Prod
+
+on:
+  repository_dispatch:
+    types: [deploy_scenario]
