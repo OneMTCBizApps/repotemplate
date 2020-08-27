@@ -1,63 +1,172 @@
-name: Submitting Solution to UAT
+name: UAT Workflow
 
 on:
-  repository_dispatch:
-    types: [uat_scenario]
+ repository_dispatch:
+   types: [uat_trigger]
+#    push:
+#      branches:
+#      - master
 
 jobs:
   build:
 
     env:
-     SolutionName: navb_test
+     SolutionName: ${{ github.event.client_payload.solutionname }}
+     branchName: ${{ github.event.client_payload.branch }}
+     notes: ${{ github.event.client_payload.notes }}
+     requestId: ${{ github.event.client_payload.requestid }}
 
     runs-on: self-hosted
 
     steps:
     - name: 'clone this repo'
       uses: actions/checkout@v2-beta
+      with:
+        ref: 'refs/heads/${{ env.branchName }}'
 
-    - name: 'Power Actions Repo Checkout'
+    - name: 'Power ALM Export action Checkout'
       uses: actions/checkout@v2-beta
       with:
-        repository: poweralm/PowerActions
+        repository: poweralm/export
         ref: refs/heads/master
         token: ${{ secrets.PP_ACTION_SEC }}
-        path: .github/actions/
+        path: .github/export
 
-    - name: 'Export And Unpack the Power Solution'
-      uses: ./.github/actions
+    - name: 'Power ALM Import action Checkout'
+      uses: actions/checkout@v2-beta
       with:
-        actionName: 'ExportUnpack'
-        connectionString: 'AuthType=Office365;Username=meganb@pplatform.onmicrosoft.com;Password=pass#word3;Url=https://githubdevops.crm.dynamics.com'
-        solutionName: ${{env.SolutionName}}
-        packageType: 'Unmanaged'
+        repository: poweralm/import
+        ref: refs/heads/master
+        token: ${{ secrets.PP_ACTION_SEC }}
+        path: .github/import
 
-    - name: "commit using script"
-      # working-directory: "./.repo"
+    - name: 'Power ALM Pack Checkout'
+      uses: actions/checkout@v2-beta
+      with:
+        repository: poweralm/pack
+        ref: refs/heads/master
+        token: ${{ secrets.PP_ACTION_SEC }}
+        path: .github/pack
+
+    - name: 'Power ALM Unpack Checkout'
+      uses: actions/checkout@v2-beta
+      with:
+        repository: poweralm/unpack
+        ref: refs/heads/master
+        token: ${{ secrets.PP_ACTION_SEC }}
+        path: .github/unpack
+
+    - name: 'Export the Power Solution Dev Environment'
+      uses: ./.github/export
+      with:
+        connectionString: '${{ secrets.DEV_CS }}'
+        solutionName: ${{env.SolutionName}}
+        ExportSolutionOutputPath: 'exported_unmanaged'
+        packageType: 'Unmanaged'
+    
+    - name: 'Unpack the power solution'
+      uses: ./.github/unpack
+      with:
+        UnpackedFilesFolder: ${{env.SolutionName}}
+        SolutionName: ${{env.SolutionName}}
+        solutionFile: 'exported_unmanaged\${{env.SolutionName}}.zip'
+
+    - name: "Commit the unpacked solution to the repo"
       run: |
        $SolutionName= echo ${{env.SolutionName}}
-       git add --all $SolutionName/
-       git commit -m "Committing unpacked solution"
+       $branchName = echo ${{ env.branchName }}
+       $commitMessage = echo ${{env.notes}}
+       if ($null -eq $commitMessage -or $commitMessage -eq "") {
+         $commitMessage = "Committing unpacked solution"
+       }
+       git fetch 
+       git add --all $SolutionName/**
+       git status
+       git commit -m $commitMessage
        git push --force
 
-    - name: 'Pack and Import the Solution'
-      uses: ./.github/actions
+    - name: 'Pack the Solution'
+      uses: ./.github/pack
       with:
-        actionName: 'PackImport'
-        connectionString: 'AuthType=Office365;Username=admin@CRM647220.onmicrosoft.com;Password=6FpApp831H;url=https://crm647220.crm.dynamics.com'
-        packageType: 'Unmanaged'
-        unpackedFilesPath: ${{env.SolutionName}}
+        PackageType: 'Unmanaged'
+        unpackedFilesFolder: ${{env.SolutionName}}
+        OutputPath: 'packed'
 
-    - name: 'Export the solution as managed'
-      uses: ./.github/actions
+    - name: 'Import the solution to Build Environment'
+      uses: ./.github/import
       with:
-        actionName: 'ExportUnpack'
-        connectionString: 'AuthType=Office365;Username=admin@CRM647220.onmicrosoft.com;Password=6FpApp831H;url=https://crm647220.crm.dynamics.com'
+        ConnectionString: '${{ secrets.BUILD_CS }}'
+        SolutionFile: 'packed\${{ env.SolutionName }}.zip'
+
+    - name: 'Export the solution as managed from build Environment'
+      uses: ./.github/export
+      with:
+        connectionString: '${{ secrets.BUILD_CS }}'
         solutionName: ${{env.SolutionName}}
         packageType: 'Managed'
+        ExportSolutionOutputPath: 'exported_managed'
 
-    - name: 'Upload the solution as managed to artifact'
+    - name: 'Import the managed solution to the UAT Environment'
+      uses: ./.github/import
+      with:
+        ConnectionString: '${{ secrets.UAT_CS }}'
+        SolutionFile: 'exported_managed\${{env.SolutionName}}_managed.zip'
+
+    - name: 'Upload the managed to solution to artifact'
       uses: actions/upload-artifact@v2
       with:
         name: ${{env.SolutionName}}
-        path: 'exported\${{env.SolutionName}}.zip'
+        path: 'exported_managed\${{env.SolutionName}}_managed.zip'
+
+    - name: Set job status
+      if: always()
+      run: |
+        $jobStatus = echo ${{ job.status }}
+        $workflow = echo ${{ github.workflow }}
+        $branch = echo ${{ env.branchName }}
+        $repo = echo ${{ github.repository }}
+        $run = echo ${{ github.run_id }}
+        $requestId = echo ${{ env.requestId }}
+        $status = @{
+          'status' = $jobStatus;
+          'workflow' = $wokrkflow;
+          'branch' = $branch;
+          'repo' = $repo;
+          'run' = $run;
+          'requestid' = $requestId
+        }
+        $jsonString = ConvertTo-Json -InputObject $status
+        $jsonString > status.txt
+
+    - name: Update job status
+      uses: actions/upload-artifact@v1
+      with:
+        name: pass_status
+        path: status.txt
+
+  notify:
+    needs: [build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      
+    - name: Download artifact pass_status
+      uses: actions/download-artifact@v1
+      with:
+        name: pass_status
+
+    - name: Check status
+      if: always()
+      id: check_files
+      uses: andstor/file-existence-action@v1.0.1
+      with:
+        files: "pass_status/status.txt"
+        
+
+    - name: Invoke Notification API
+      if: always()
+      uses: distributhor/workflow-webhook@v1
+      env:
+        webhook_url: ${{ github.event.client_payload.webhookurl }}
+        webhook_secret: ' dummy '
+        data: '{"status" : ${{ steps.check_files.outputs.files_exists }} }'
