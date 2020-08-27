@@ -14,7 +14,7 @@ jobs:
      prodCS: ${{ secrets.PRODUCTION_CS }}
      testCS: ${{ secrets.TEST_CS }}
 
-    runs-on: self-hosted
+    runs-on: windows-2019
 
     steps:
     - name: 'clone this repo'
