@@ -73,17 +73,26 @@ jobs:
 
     - name: "Commit the unpacked solution to the repo"
       run: |
-       $SolutionName= echo ${{env.SolutionName}}
-       $branchName = echo ${{ env.branchName }}
-       $commitMessage = echo ${{env.notes}}
-       if ($null -eq $commitMessage -or $commitMessage -eq "") {
-         $commitMessage = "Committing unpacked solution"
-       }
-       git fetch 
-       git add --all $SolutionName/**
-       git status
-       git commit -m $commitMessage
-       git push --force
+        $SolutionName= echo ${{env.SolutionName}}
+        $branchName = echo ${{ env.branchName }}
+        $commitMessage = echo "${{env.notes}}"
+        if ($null -eq $commitMessage -or $commitMessage -eq "") {
+          $commitMessage = "Committing unpacked solution"
+        }
+        git fetch 
+        git config --global user.name 'Admin'
+        git config --global user.email 'Admin@users.noreply.github.com'
+        echo "Fetch done"
+        git add --all $SolutionName/**
+        echo "Add done"
+        git status -v 
+        echo "Status done"
+        git commit -m $commitMessage
+        echo "Commit done"
+        git push --force 
+        echo "Push Done"
+        Write-Host "There's an issue in windows : the git doesn't exit cleanly. Hence exit code 1."
+      continue-on-error: true
 
     - name: 'Pack the Solution'
       uses: ./.github/pack
