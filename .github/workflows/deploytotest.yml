@@ -16,7 +16,7 @@ jobs:
      notes: ${{ github.event.client_payload.notes }}
      requestId: ${{ github.event.client_payload.requestid }}
 
-    runs-on: self-hosted
+    runs-on: windows-2019
 
     steps:
     - name: 'clone this repo'
