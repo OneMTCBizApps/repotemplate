@@ -11,6 +11,7 @@ jobs:
      SolutionName: ${{ github.event.client_payload.solutionname }}
      prodCS: ${{ secrets.PRODUCTION_CS }}
      testCS: ${{ secrets.BUILD_CS }}
+     requestId: ${{ github.event.client_payload.requestid }}
 
     runs-on: windows-2019
 
