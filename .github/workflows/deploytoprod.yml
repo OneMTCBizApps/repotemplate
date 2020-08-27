@@ -1,5 +1,53 @@
-name: Deploying Solution to Prod
+name: UAT Workflow
 
 on:
-  repository_dispatch:
-    types: [deploy_scenario]
+ repository_dispatch:
+   types: [prod_trigger]
+   
+   
+   
+jobs:
+  build:
+
+    env:
+     SolutionName: navb_test
+     prodCS: ${{ secrets.PROD_CS }}
+     uatCS: ${{ secrets.UAT_CS }}
+
+    runs-on: self-hosted
+
+    steps:
+    - name: 'clone this repo'
+      uses: actions/checkout@v2-beta
+
+    - name: 'Power ALM Export action Checkout'
+      uses: actions/checkout@v2-beta
+      with:
+        repository: poweralm/export
+        ref: refs/heads/master
+        token: ${{ secrets.PP_ACTION_SEC }}
+        path: .github/export
+
+    - name: 'Power ALM Import action Checkout'
+      uses: actions/checkout@v2-beta
+      with:
+        repository: poweralm/import
+        ref: refs/heads/master
+        token: ${{ secrets.PP_ACTION_SEC }}
+        path: .github/import
+
+       
+    - name: 'Export the Power Solution from UAT Environment'
+      uses: ./.github/export
+      with:
+        connectionString: '${{ secrets.UAT_CS }}'
+        solutionName: ${{env.SolutionName}}
+        ExportSolutionOutputPath: 'exported_managed'
+        packageType: 'Managed'
+        
+    - name: 'Import the solution to Prod Environment'
+      uses: ./.github/import
+      with:
+        ConnectionString: '${{ secrets.PROD_CS }}'
+        SolutionFile: 'exported_managed\${{env.SolutionName}}.zip'
+    
