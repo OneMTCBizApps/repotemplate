@@ -1,4 +1,4 @@
-name: UAT Workflow
+name: PROD Workflow
 
 on:
  repository_dispatch:
@@ -10,9 +10,9 @@ jobs:
   build:
 
     env:
-     SolutionName: navb_test
-     prodCS: ${{ secrets.PROD_CS }}
-     uatCS: ${{ secrets.UAT_CS }}
+     SolutionName: ${{ github.event.client_payload.solutionname }}
+     prodCS: ${{ secrets.PRODUCTION_CS }}
+     testCS: ${{ secrets.TEST_CS }}
 
     runs-on: self-hosted
 
@@ -40,7 +40,7 @@ jobs:
     - name: 'Export the Power Solution from UAT Environment'
       uses: ./.github/export
       with:
-        connectionString: '${{ secrets.UAT_CS }}'
+        connectionString: '${{ env.testCS }}'
         solutionName: ${{env.SolutionName}}
         ExportSolutionOutputPath: 'exported_managed'
         packageType: 'Managed'
@@ -48,6 +48,59 @@ jobs:
     - name: 'Import the solution to Prod Environment'
       uses: ./.github/import
       with:
-        ConnectionString: '${{ secrets.PROD_CS }}'
+        ConnectionString: '${{ env.prodCS }}'
         SolutionFile: 'exported_managed\${{env.SolutionName}}.zip'
     
+
+    - name: Set job status
+      if: always()
+      run: |
+        $jobStatus = echo ${{ job.status }}
+        $workflow = echo ${{ github.workflow }}
+        $branch = echo ${{ env.branchName }}
+        $repo = echo ${{ github.repository }}
+        $run = echo ${{ github.run_id }}
+        $requestId = echo ${{ env.requestId }}
+        $status = @{
+          'status' = $jobStatus;
+          'workflow' = $wokrkflow;
+          'branch' = $branch;
+          'repo' = $repo;
+          'run' = $run;
+          'requestid' = $requestId
+        }
+        $jsonString = ConvertTo-Json -InputObject $status
+        $jsonString > status.txt
+    - name: Update job status
+      uses: actions/upload-artifact@v1
+      with:
+        name: pass_status
+        path: status.txt
+        
+        
+  notify:
+    needs: [build]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      
+    - name: Download artifact pass_status
+      uses: actions/download-artifact@v1
+      with:
+        name: pass_status
+
+    - name: Check status
+      if: always()
+      id: check_files
+      uses: andstor/file-existence-action@v1.0.1
+      with:
+        files: "pass_status/status.txt"
+        
+
+    - name: Invoke Notification API
+      if: always()
+      uses: distributhor/workflow-webhook@v1
+      env:
+        webhook_url: ${{ github.event.client_payload.webhookurl }}
+        webhook_secret: ' dummy '
+        data: '{"status" : ${{ steps.check_files.outputs.files_exists }} }'        
