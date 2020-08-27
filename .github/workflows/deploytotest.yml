@@ -3,9 +3,6 @@ name: Deploy to test Workflow
 on:
  repository_dispatch:
    types: [uat_trigger]
-#    push:
-#      branches:
-#      - master
 
 jobs:
   build:
@@ -156,6 +153,8 @@ jobs:
   notify:
     needs: [build]
     if: always()
+    env:
+      status: ''
     runs-on: ubuntu-latest
     steps:
       
@@ -170,7 +169,18 @@ jobs:
       uses: andstor/file-existence-action@v1.0.1
       with:
         files: "pass_status/status.txt"
-        
+    
+    - name: Reading status
+      if: always()
+      run: |
+        statusText='{"status":"${{ steps.check_files.outputs.files_exists }}", "requestid":"'"${{ github.event.client_payload.requestid }}"'", "run":${{ github.run_id }}, "workflow":"'"${{ github.workflow }}"'"}'
+        echo $statusText
+        echo "::set-env name=status::$statusText"
+
+    - name: Printing status
+      if: always()
+      run: |
+        echo ${{ env.status }}
 
     - name: Invoke Notification API
       if: always()
@@ -178,4 +188,4 @@ jobs:
       env:
         webhook_url: ${{ github.event.client_payload.webhookurl }}
         webhook_secret: ' dummy '
-        data: '{"status" : ${{ steps.check_files.outputs.files_exists }} }'
+        data: ${{ env.status }}
