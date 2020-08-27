@@ -145,6 +145,7 @@ jobs:
         $jsonString > status.txt
 
     - name: Update job status
+      if: always()
       uses: actions/upload-artifact@v1
       with:
         name: pass_status
