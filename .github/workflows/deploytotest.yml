@@ -1,4 +1,4 @@
-name: UAT Workflow
+name: Deploy to test Workflow
 
 on:
  repository_dispatch:
@@ -109,7 +109,7 @@ jobs:
     - name: 'Import the managed solution to the UAT Environment'
       uses: ./.github/import
       with:
-        ConnectionString: '${{ secrets.UAT_CS }}'
+        ConnectionString: '${{ secrets.TEST_CS }}'
         SolutionFile: 'exported_managed\${{env.SolutionName}}_managed.zip'
 
     - name: 'Upload the managed to solution to artifact'
