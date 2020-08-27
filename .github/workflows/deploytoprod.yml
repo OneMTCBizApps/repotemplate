@@ -63,8 +63,6 @@ jobs:
       run: |
         $jobStatus = echo ${{ job.status }}
         $workflow = echo ${{ github.workflow }}
-        $branch = echo ${{ env.branchName }}
-        $repo = echo ${{ github.repository }}
         $run = echo ${{ github.run_id }}
         $requestId = echo ${{ env.requestId }}
         $status = @{
