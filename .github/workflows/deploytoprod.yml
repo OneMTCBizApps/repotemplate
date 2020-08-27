@@ -18,13 +18,13 @@ jobs:
     - name: 'clone this repo'
       uses: actions/checkout@v2-beta
 
-    - name: 'Power ALM Export action Checkout'
-      uses: actions/checkout@v2-beta
-      with:
-        repository: poweralm/export
-        ref: refs/heads/master
-        token: ${{ secrets.PP_ACTION_SEC }}
-        path: .github/export
+#    - name: 'Power ALM Export action Checkout'
+#      uses: actions/checkout@v2-beta
+#      with:
+#        repository: poweralm/export
+#        ref: refs/heads/master
+#        token: ${{ secrets.PP_ACTION_SEC }}
+#        path: .github/export
 
     - name: 'Power ALM Import action Checkout'
       uses: actions/checkout@v2-beta
@@ -35,19 +35,28 @@ jobs:
         path: .github/import
 
        
-    - name: 'Export the Power Solution from UAT Environment'
-      uses: ./.github/export
+#    - name: 'Export the Power Solution from UAT Environment'
+#      uses: ./.github/export
+#      with:
+#        connectionString: '${{ env.testCS }}'
+#        solutionName: ${{env.SolutionName}}
+#        ExportSolutionOutputPath: 'exported_managed'
+#        packageType: 'Managed'
+
+    - name: Download artifact
+      uses: dawidd6/action-download-artifact@v2
       with:
-        connectionString: '${{ env.testCS }}'
-        solutionName: ${{env.SolutionName}}
-        ExportSolutionOutputPath: 'exported_managed'
-        packageType: 'Managed'
-        
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          # Required, workflow file name or ID
+          workflow: deploytotest.yml
+
+
+
     - name: 'Import the solution to Prod Environment'
       uses: ./.github/import
       with:
         ConnectionString: '${{ env.prodCS }}'
-        SolutionFile: 'exported_managed\${{env.SolutionName}}.zip'
+        SolutionFile: '${{env.SolutionName}}\${{env.SolutionName}}_managed.zip'
     
     - name: Set job status
       if: always()
