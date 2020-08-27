@@ -118,7 +118,7 @@ jobs:
         ConnectionString: '${{ secrets.TEST_CS }}'
         SolutionFile: 'exported_managed\${{env.SolutionName}}_managed.zip'
 
-    - name: 'Upload the managed to solution to artifact'
+    - name: 'Upload the managed solution to artifact'
       uses: actions/upload-artifact@v2
       with:
         name: ${{env.SolutionName}}
