@@ -2,7 +2,7 @@ name: Deploy to Test Environment
 
 on:
  repository_dispatch:
-   types: [depoy_to_test_trigger]
+   types: [depoy_to_test]
 
 jobs:
   build:
