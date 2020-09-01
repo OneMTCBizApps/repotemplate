@@ -1,16 +1,15 @@
-name: Deploy to Production
+name: Deploy to Production Environment
 
 on:
  repository_dispatch:
-   types: [prod_trigger]
+   types: [deploy_to_prod_trigger]
    
 jobs:
   build:
 
     env:
      SolutionName: ${{ github.event.client_payload.solutionname }}
-     prodCS: ${{ secrets.PRODUCTION_CS }}
-     testCS: ${{ secrets.BUILD_CS }}
+     prodCS: ${{ secrets.PRODUCTION_ENV_CONNECTION_STRING }}
      requestId: ${{ github.event.client_payload.requestid }}
 
     runs-on: windows-2019
@@ -18,14 +17,6 @@ jobs:
     steps:
     - name: 'clone this repo'
       uses: actions/checkout@v2-beta
-
-#    - name: 'Power ALM Export action Checkout'
-#      uses: actions/checkout@v2-beta
-#      with:
-#        repository: poweralm/export
-#        ref: refs/heads/master
-#        token: ${{ secrets.PP_ACTION_SEC }}
-#        path: .github/export
 
     - name: 'Power ALM Import action Checkout'
       uses: actions/checkout@v2-beta
@@ -35,14 +26,6 @@ jobs:
         token: ${{ secrets.PP_ACTION_SEC }}
         path: .github/import
 
-       
-#    - name: 'Export the Power Solution from UAT Environment'
-#      uses: ./.github/export
-#      with:
-#        connectionString: '${{ env.testCS }}'
-#        solutionName: ${{env.SolutionName}}
-#        ExportSolutionOutputPath: 'exported_managed'
-#        packageType: 'Managed'
 
     - name: Download artifact
       uses: dawidd6/action-download-artifact@v2

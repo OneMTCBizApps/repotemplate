@@ -1,8 +1,8 @@
-name: Deploy to test Workflow
+name: Deploy to Test Environment
 
 on:
  repository_dispatch:
-   types: [uat_trigger]
+   types: [depoy_to_test_trigger]
 
 jobs:
   build:
@@ -12,6 +12,11 @@ jobs:
      branchName: ${{ github.event.client_payload.branch }}
      notes: ${{ github.event.client_payload.notes }}
      requestId: ${{ github.event.client_payload.requestid }}
+     POWER_PLATFORM_ACTIONS_SECRET: ${{ secrets.POWER_PLATFORM_ACTIONS_SECRET }}
+     BUILD_ENV_CONNECTION_STRING: ${{ secrets.BUILD_ENV_CONNECTION_STRING }}
+     DEV_ENV_CONNECTION_STRING: ${{ secrets.DEV_ENV_CONNECTION_STRING }}
+     TEST_ENV_CONNECTION_STRING: ${{ secrets.TEST_ENV_CONNECTION_STRING }}
+
 
     runs-on: windows-2019
 
@@ -26,7 +31,7 @@ jobs:
       with:
         repository: poweralm/export
         ref: refs/heads/master
-        token: ${{ secrets.PP_ACTION_SEC }}
+        token: ${{ env.POWER_PLATFORM_ACTIONS_SECRET }}
         path: .github/export
 
     - name: 'Power ALM Import action Checkout'
@@ -34,7 +39,7 @@ jobs:
       with:
         repository: poweralm/import
         ref: refs/heads/master
-        token: ${{ secrets.PP_ACTION_SEC }}
+        token: ${{ env.POWER_PLATFORM_ACTIONS_SECRET }}
         path: .github/import
 
     - name: 'Power ALM Pack Checkout'
@@ -42,7 +47,7 @@ jobs:
       with:
         repository: poweralm/pack
         ref: refs/heads/master
-        token: ${{ secrets.PP_ACTION_SEC }}
+        token: ${{ env.POWER_PLATFORM_ACTIONS_SECRET }}
         path: .github/pack
 
     - name: 'Power ALM Unpack Checkout'
@@ -50,13 +55,13 @@ jobs:
       with:
         repository: poweralm/unpack
         ref: refs/heads/master
-        token: ${{ secrets.PP_ACTION_SEC }}
+        token: ${{ env.POWER_PLATFORM_ACTIONS_SECRET }}
         path: .github/unpack
 
     - name: 'Export the Power Solution Dev Environment'
       uses: ./.github/export
       with:
-        connectionString: '${{ secrets.DEV_CS }}'
+        connectionString: '${{ env.DEV_ENV_CONNECTION_STRING }}'
         solutionName: ${{env.SolutionName}}
         ExportSolutionOutputPath: 'exported_unmanaged'
         packageType: 'Unmanaged'
@@ -101,13 +106,13 @@ jobs:
     - name: 'Import the solution to Build Environment'
       uses: ./.github/import
       with:
-        ConnectionString: '${{ secrets.BUILD_CS }}'
+        ConnectionString: '${{ env.BUILD_ENV_CONNECTION_STRING }}'
         SolutionFile: 'packed\${{ env.SolutionName }}.zip'
 
     - name: 'Export the solution as managed from build Environment'
       uses: ./.github/export
       with:
-        connectionString: '${{ secrets.BUILD_CS }}'
+        connectionString: '${{ env.BUILD_ENV_CONNECTION_STRING }}'
         solutionName: ${{env.SolutionName}}
         packageType: 'Managed'
         ExportSolutionOutputPath: 'exported_managed'
@@ -115,7 +120,7 @@ jobs:
     - name: 'Import the managed solution to the UAT Environment'
       uses: ./.github/import
       with:
-        ConnectionString: '${{ secrets.TEST_CS }}'
+        ConnectionString: '${{ env.TEST_ENV_CONNECTION_STRING }}'
         SolutionFile: 'exported_managed\${{env.SolutionName}}_managed.zip'
 
     - name: 'Upload the managed solution to artifact'
