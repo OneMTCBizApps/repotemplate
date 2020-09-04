@@ -98,6 +98,7 @@ jobs:
         ConnectionString: '${{ secrets.DEV_ENV_CONNECTION_STRING }}'
         ConfigFilePath: importConfigFile.json
         logsDirectory: "logs"
+      continue-on-error: true
 
     - name: Set job status
       if: always()
