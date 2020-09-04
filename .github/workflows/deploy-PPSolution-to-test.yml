@@ -192,7 +192,7 @@ jobs:
             'branch' = $branch;
             'repo' = $repo;
             'run' = $run;
-            'requestid' = $requestId
+            'requestid' = $requestId;
             'projectid' = "$projectid"
           }
           $jsonData = ConvertTo-Json -InputObject $status
