@@ -11,6 +11,7 @@ jobs:
      requestId: ${{ github.event.client_payload.requestid }}
      solutions: ${{ github.event.client_payload.solutions }}
      POWER_PLATFORM_ACTIONS_SECRET: ${{ secrets.POWER_PLATFORM_ACTIONS_SECRET }}
+     projectId: ${{ github.event.client_payload.projectid }}
 
     runs-on: windows-latest
 
@@ -107,6 +108,7 @@ jobs:
         $repo = echo ${{ github.repository }}
         $run = echo ${{ github.run_id }}
         $requestId = echo ${{ env.requestId }}
+        $projectid = echo "${{ env.projectId }}"
         $status = @{
           'status' = $jobStatus;
           'workflow' = "$workflow";
@@ -114,6 +116,7 @@ jobs:
           'repo' = $repo;
           'run' = $run;
           'requestid' = $requestId
+          'projectid' = "$projectid"
         }
         $jsonString = ConvertTo-Json -InputObject $status
         $jsonString > status.json
@@ -151,6 +154,7 @@ jobs:
           $repo = echo ${{ github.repository }}
           $run = echo ${{ github.run_id }}
           $requestId = echo ${{ github.event.client_payload.requestid }}
+          $projectid = echo "${{ github.event.client_payload.projectid }}"
           $status = @{
             'status' = $fileExists;
             'workflow' = "$workflow";
@@ -158,6 +162,7 @@ jobs:
             'repo' = $repo;
             'run' = $run;
             'requestid' = $requestId
+            'projectid' = "$projectid"
           }
           $jsonData = ConvertTo-Json -InputObject $status
           echo "Data constructed as status.json file is not present :: " $jsonData
