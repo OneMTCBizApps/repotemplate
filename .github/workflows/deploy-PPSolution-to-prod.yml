@@ -49,7 +49,8 @@ jobs:
         $requestId = echo ${{ env.requestId }}
         $status = @{
           'status' = $jobStatus;
-          'workflow' = $wokrkflow;
+          'workflow' = "$workflow";
+          'branch' = "";
           'run' = $run;
           'requestid' = $requestId
         }
@@ -59,7 +60,7 @@ jobs:
     - name: Update job status
       uses: actions/upload-artifact@v1
       with:
-        name: pass_status
+        name: job_status
         path: status.json
   
   notify:
@@ -68,30 +69,29 @@ jobs:
     runs-on: windows-latest
     steps:
 
-    - name: Download artifact pass_status
+    - name: Download artifact job_status
       uses: actions/download-artifact@v1
       with:
-        name: pass_status
+        name: job_status
 
     - name: Reading status & Invoking the webhook
       if: always()
       run: |
-        $fileExists = Test-Path pass_status/status.json -PathType Leaf
+        $fileExists = Test-Path job_status/status.json -PathType Leaf
         $uri = echo '${{ github.event.client_payload.webhookurl }}'
         $jsonData = ''
         if ($fileExists) {
-          $jsonData = Get-Content pass_status/status.json
+          $jsonData = Get-Content job_status/status.json
           echo "Data read from status file :: " $jsonData
         } else {
           $workflow = echo ${{ github.workflow }}
-          $branch = echo ${{ github.event.client_payload.branch }}
           $repo = echo ${{ github.repository }}
           $run = echo ${{ github.run_id }}
           $requestId = echo ${{ github.event.client_payload.requestid }}
           $status = @{
             'status' = $fileExists;
-            'workflow' = $workflow;
-            'branch' = $branch;
+            'workflow' = "$workflow";
+            'branch' = "";
             'repo' = $repo;
             'run' = $run;
             'requestid' = $requestId
