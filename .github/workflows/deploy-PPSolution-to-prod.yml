@@ -9,7 +9,7 @@ jobs:
 
     env:
      SolutionName: ${{ github.event.client_payload.solutionname }}
-     prodCS: ${{ secrets.PRODUCTION_ENV_CONNECTION_STRING }}
+     prodCS: ${{ secrets.PROD_ENV_CONNECTION_STRING }}
      requestId: ${{ github.event.client_payload.requestid }}
      POWER_PLATFORM_ACTIONS_SECRET: ${{ secrets.POWER_PLATFORM_ACTIONS_SECRET }}
      projectId: ${{ github.event.client_payload.projectid }}
