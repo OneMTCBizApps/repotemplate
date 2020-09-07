@@ -104,8 +104,8 @@ jobs:
     - name: Set job status
       if: always()
       run: |
-        $importError = echo '${{ steps.imports.outputs.errorMessage }}'
-        $exportError = echo '${{ steps.exports.outputs.errorMessage }}'
+        $importError = echo "${{ steps.imports.outputs.errorMessage }}"
+        $exportError = echo "${{ steps.exports.outputs.errorMessage }}"
         $errors = @{
           'ImportAction' = "$importError";
           'ExportAction' = "$exportError"

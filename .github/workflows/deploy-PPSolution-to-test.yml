@@ -59,7 +59,7 @@ jobs:
         token: ${{ env.POWER_PLATFORM_ACTIONS_SECRET }}
         path: .github/unpack
 
-    - name: 'Export the Power Solution Dev Environment'
+    - name: 'Export the Power Solution from Dev Environment'
       id: export-dev
       uses: ./.github/export
       with:
@@ -76,7 +76,7 @@ jobs:
         SolutionName: ${{env.SolutionName}}
         solutionFile: 'exported_unmanaged\${{env.SolutionName}}.zip'
 
-    - name: "Commit the unpacked solution to the repo"
+    - name: "commit the unpacked solution to the branch"
       run: |
         $SolutionName= echo ${{env.SolutionName}}
         $branchName = echo ${{ env.branchName }}
@@ -123,7 +123,7 @@ jobs:
         packageType: 'Managed'
         ExportSolutionOutputPath: 'exported_managed'
 
-    - name: 'Import the managed solution to the UAT Environment'
+    - name: 'Import the managed solution to the Test Environment'
       id: import-uat
       uses: ./.github/import
       with:
@@ -139,12 +139,12 @@ jobs:
     - name: Set job status
       if: always()
       run: |
-        $exportDev = echo '${{ steps.export-dev.outputs.errorMessage }}'
-        $unpackDev = echo '${{ steps.unpack-dev.outputs.errorMessage }}'
-        $packDev = echo '${{ steps.pack-dev.outputs.errorMessage }}'
-        $importBuild = echo '${{ steps.import-build.outputs.errorMessage }}'
-        $exportBuild = echo '${{ steps.export-build.outputs.errorMessage }}'
-        $importUat = echo '${{ steps.import-uat.outputs.errorMessage }}'
+        $exportDev = echo "${{ steps.export-dev.outputs.errorMessage }}"
+        $unpackDev = echo "${{ steps.unpack-dev.outputs.errorMessage }}"
+        $packDev = echo "${{ steps.pack-dev.outputs.errorMessage }}"
+        $importBuild = echo "${{ steps.import-build.outputs.errorMessage }}"
+        $exportBuild = echo "${{ steps.export-build.outputs.errorMessage }}"
+        $importUat = echo "${{ steps.import-uat.outputs.errorMessage }}"
         $errors = @{
           'ExportAction-Dev'="$exportDev";
           'UnpackAction-Dev'="$unpackDev";
@@ -206,7 +206,7 @@ jobs:
           $repo = echo ${{ github.repository }}
           $run = echo ${{ github.run_id }}
           $requestId = echo ${{ github.event.client_payload.requestid }}
-          projectid = echo "${{ github.event.client_payload.projectid }}"
+          $projectid = echo "${{ github.event.client_payload.projectid }}"
           $status = @{
             'status' = $fileExists;
             'workflow' = "$workflow";
