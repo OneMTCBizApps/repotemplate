@@ -36,6 +36,7 @@ jobs:
           workflow: deploy-PPSolution-to-test.yml
 
     - name: 'Import the solution to Prod Environment'
+      id: import
       uses: ./.github/import
       with:
         ConnectionString: '${{ env.prodCS }}'
@@ -44,6 +45,10 @@ jobs:
     - name: Set job status
       if: always()
       run: |
+        $importError = echo '${{ steps.import.outputs.errorMessage }}'
+        $errors = @{
+          'ImportAction' = "$importError"
+        }
         $jobStatus = echo ${{ job.status }}
         $workflow = echo ${{ github.workflow }}
         $run = echo ${{ github.run_id }}
@@ -56,6 +61,7 @@ jobs:
           'run' = $run;
           'requestid' = $requestId;
           'projectid' = "$projectid"
+          'errors' = $errors
         }
         $jsonString = ConvertTo-Json -InputObject $status
         $jsonString > status.json
@@ -99,7 +105,8 @@ jobs:
             'repo' = $repo;
             'run' = $run;
             'requestid' = $requestId;
-            'projectid' = "$projectid"
+            'projectid' = "$projectid";
+            'errors' = ""
           }
           $jsonData = ConvertTo-Json -InputObject $status
           echo "Data constructed as status.json file is not present :: " $jsonData

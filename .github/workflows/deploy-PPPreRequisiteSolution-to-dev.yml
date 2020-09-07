@@ -100,11 +100,16 @@ jobs:
         ConnectionString: '${{ secrets.DEV_ENV_CONNECTION_STRING }}'
         ConfigFilePath: importConfigFile.json
         logsDirectory: "logs"
-      continue-on-error: true
 
     - name: Set job status
       if: always()
       run: |
+        $importError = echo '${{ steps.imports.outputs.errorMessage }}'
+        $exportError = echo '${{ steps.exports.outputs.errorMessage }}'
+        $errors = @{
+          'ImportAction' = "$importError";
+          'ExportAction' = "$exportError"
+        }
         $jobStatus = echo ${{ job.status }}
         $workflow = echo ${{ github.workflow }}
         $branch = ""
@@ -112,7 +117,6 @@ jobs:
         $run = echo ${{ github.run_id }}
         $requestId = echo ${{ env.requestId }}
         $projectid = echo "${{ env.projectId }}"
-        $errors = echo "${{ steps.imports.errorMessage }}"
         $status = @{
           'status' = $jobStatus;
           'workflow' = "$workflow";
@@ -121,7 +125,7 @@ jobs:
           'run' = $run;
           'requestid' = $requestId;
           'projectid' = "$projectid";
-          'errors' = "$errors"
+          'errors' = $errors
         }
         $jsonString = ConvertTo-Json -InputObject $status
         $jsonString > status.json

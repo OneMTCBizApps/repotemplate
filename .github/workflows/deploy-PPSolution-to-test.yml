@@ -60,6 +60,7 @@ jobs:
         path: .github/unpack
 
     - name: 'Export the Power Solution Dev Environment'
+      id: export-dev
       uses: ./.github/export
       with:
         connectionString: '${{ env.DEV_ENV_CONNECTION_STRING }}'
@@ -68,6 +69,7 @@ jobs:
         packageType: 'Unmanaged'
     
     - name: 'Unpack the power solution'
+      id: unpack-dev
       uses: ./.github/unpack
       with:
         UnpackedFilesFolder: ${{env.SolutionName}}
@@ -98,6 +100,7 @@ jobs:
       continue-on-error: true
 
     - name: 'Pack the Solution'
+      id: pack-dev
       uses: ./.github/pack
       with:
         PackageType: 'Unmanaged'
@@ -105,12 +108,14 @@ jobs:
         OutputPath: 'packed'
 
     - name: 'Import the solution to Build Environment'
+      id: import-build
       uses: ./.github/import
       with:
         ConnectionString: '${{ env.BUILD_ENV_CONNECTION_STRING }}'
         SolutionFile: 'packed\${{ env.SolutionName }}.zip'
 
     - name: 'Export the solution as managed from build Environment'
+      id: export-build
       uses: ./.github/export
       with:
         connectionString: '${{ env.BUILD_ENV_CONNECTION_STRING }}'
@@ -119,6 +124,7 @@ jobs:
         ExportSolutionOutputPath: 'exported_managed'
 
     - name: 'Import the managed solution to the UAT Environment'
+      id: import-uat
       uses: ./.github/import
       with:
         ConnectionString: '${{ env.TEST_ENV_CONNECTION_STRING }}'
@@ -133,6 +139,20 @@ jobs:
     - name: Set job status
       if: always()
       run: |
+        $exportDev = echo '${{ steps.export-dev.outputs.errorMessage }}'
+        $unpackDev = echo '${{ steps.unpack-dev.outputs.errorMessage }}'
+        $packDev = echo '${{ steps.pack-dev.outputs.errorMessage }}'
+        $importBuild = echo '${{ steps.import-build.outputs.errorMessage }}'
+        $exportBuild = echo '${{ steps.export-build.outputs.errorMessage }}'
+        $importUat = echo '${{ steps.import-uat.outputs.errorMessage }}'
+        $errors = @{
+          'ExportAction-Dev'="$exportDev";
+          'UnpackAction-Dev'="$unpackDev";
+          'PackAction-Dev'="$packDev";
+          'ImportAction-Build'="$importBuild";
+          'ExportAction-Build'="$exportBuild";
+          'ImportAction-Test'="$importUat";
+        }
         $jobStatus = echo ${{ job.status }}
         $workflow = echo ${{ github.workflow }}
         $branch = echo ${{ env.branchName }}
@@ -147,7 +167,8 @@ jobs:
           'repo' = $repo;
           'run' = $run;
           'requestid' = $requestId;
-          'projectid' = "$projectid"
+          'projectid' = "$projectid";
+          'errors'= $errors
         }
         $jsonString = ConvertTo-Json -InputObject $status
         $jsonString > status.json
@@ -193,7 +214,8 @@ jobs:
             'repo' = $repo;
             'run' = $run;
             'requestid' = $requestId;
-            'projectid' = "$projectid"
+            'projectid' = "$projectid";
+            'errors' = ""
           }
           $jsonData = ConvertTo-Json -InputObject $status
           echo "Data constructed as status.json file is not present :: " $jsonData
