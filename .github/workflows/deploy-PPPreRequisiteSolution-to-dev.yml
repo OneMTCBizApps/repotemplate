@@ -86,7 +86,7 @@ jobs:
         path: .github/import
 
     - name: 'export the solutions'
-    - id: exports
+      id: exports
       uses: ./.github/export
       with:
         connectionString: '${{ secrets.DEPENDENCIES_ENV_CONNECTION_STRING }}'
@@ -94,7 +94,7 @@ jobs:
         exportSolutionOutputPath: "solutions"
 
     - name: 'import the solutions'
-    - id: imports
+      id: imports
       uses: ./.github/import
       with:
         ConnectionString: '${{ secrets.DEV_ENV_CONNECTION_STRING }}'
