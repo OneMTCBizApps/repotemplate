@@ -86,6 +86,7 @@ jobs:
         path: .github/import
 
     - name: 'export the solutions'
+    - id: exports
       uses: ./.github/export
       with:
         connectionString: '${{ secrets.DEPENDENCIES_ENV_CONNECTION_STRING }}'
@@ -93,6 +94,7 @@ jobs:
         exportSolutionOutputPath: "solutions"
 
     - name: 'import the solutions'
+    - id: imports
       uses: ./.github/import
       with:
         ConnectionString: '${{ secrets.DEV_ENV_CONNECTION_STRING }}'
@@ -110,6 +112,7 @@ jobs:
         $run = echo ${{ github.run_id }}
         $requestId = echo ${{ env.requestId }}
         $projectid = echo "${{ env.projectId }}"
+        $errors = echo "${{ steps.imports.errorMessage }}"
         $status = @{
           'status' = $jobStatus;
           'workflow' = "$workflow";
