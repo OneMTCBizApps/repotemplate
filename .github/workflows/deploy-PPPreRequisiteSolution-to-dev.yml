@@ -120,7 +120,8 @@ jobs:
           'repo' = $repo;
           'run' = $run;
           'requestid' = $requestId;
-          'projectid' = "$projectid"
+          'projectid' = "$projectid";
+          'errors' = "$errors"
         }
         $jsonString = ConvertTo-Json -InputObject $status
         $jsonString > status.json
