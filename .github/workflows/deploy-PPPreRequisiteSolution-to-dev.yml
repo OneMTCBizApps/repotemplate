@@ -147,6 +147,7 @@ jobs:
       uses: actions/download-artifact@v1
       with:
         name: job_status
+      continue-on-error: true
 
     - name: Reading status & Invoking the webhook
       if: always()
@@ -164,14 +165,18 @@ jobs:
           $run = echo ${{ github.run_id }}
           $requestId = echo ${{ github.event.client_payload.requestid }}
           $projectid = echo "${{ github.event.client_payload.projectid }}"
+          $errors = @{
+            "Actions"="Unable to get the status file from the previous job"
+          }
           $status = @{
-            'status' = $fileExists;
+            'status' = "$fileExists";
             'workflow' = "$workflow";
             'branch' = $branch;
             'repo' = $repo;
             'run' = $run;
             'requestid' = $requestId;
             'projectid' = "$projectid"
+            'errors' = $errors
           }
           $jsonData = ConvertTo-Json -InputObject $status
           echo "Data constructed as status.json file is not present :: " $jsonData
