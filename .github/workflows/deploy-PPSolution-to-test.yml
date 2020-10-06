@@ -1,158 +1,180 @@
 name: Deploy To Test Environment
 
+# Currently triggering this workflow on custom events, using the api https://docs.github.com/en/rest/reference/repos#create-a-repository-dispatch-event
+# Can be easily changed to other events https://docs.github.com/en/free-pro-team@latest/actions/reference/events-that-trigger-workflows 
+# NOTE: You have to change env variables with appropriate values, if you are modifying it.
 on:
  repository_dispatch:
-   types: [depoy_to_test]
+   types: [deploy_to_test]
 
 jobs:
   build:
 
     env:
-     SolutionName: ${{ github.event.client_payload.solutionname }}
+     solutionName: ${{ github.event.client_payload.solutionname }}
      branchName: ${{ github.event.client_payload.branch }}
      notes: ${{ github.event.client_payload.notes }}
+     sourceEnvironmentUserId: ${{ github.event.client_payload.sourceenvironmentuserid }}
+     sourceEnvironmentSecretName: ${{ github.event.client_payload.sourceenvironmentsecretname }}
+     sourceEnvironmentUrl: ${{ github.event.client_payload.sourceenvironmenturl }}
+     targetEnvironmentUserId: ${{ github.event.client_payload.targetenvironmentuserid }}
+     targetEnvironmentSecretName: ${{ github.event.client_payload.targetenvironmentsecretname }}
+     targetEnvironmentUrl: ${{ github.event.client_payload.targetenvironmenturl }}
+     # build variable will go away once we use actions to create the environment
+     buildEnvironmentUserId: ${{ github.event.client_payload.buildenvironmentuserid }}
+     buildEnvironmentSecretName: ${{ github.event.client_payload.buildenvironmentsecretname }}
+     buildEnvironmentUrl: ${{ github.event.client_payload.buildenvironmenturl }}
      requestId: ${{ github.event.client_payload.requestid }}
-     POWER_PLATFORM_ACTIONS_SECRET: ${{ secrets.POWER_PLATFORM_ACTIONS_SECRET }}
-     BUILD_ENV_CONNECTION_STRING: ${{ secrets.BUILD_ENV_CONNECTION_STRING }}
-     DEV_ENV_CONNECTION_STRING: ${{ secrets.DEV_ENV_CONNECTION_STRING }}
-     TEST_ENV_CONNECTION_STRING: ${{ secrets.TEST_ENV_CONNECTION_STRING }}
      projectId: ${{ github.event.client_payload.projectid }}
-
+     # this will go away once the repo:microsoft/powerplatform-actions is public
+     microsoftPowerPlatformActionsSecret: ${{ secrets.POWER_PLATFORM_ACTIONS_SECRET }}
 
     runs-on: windows-2019
 
     steps:
-    - name: 'clone this repo'
+    - name: 'Clone this repo'
       uses: actions/checkout@v2-beta
-      with:
-        ref: 'refs/heads/${{ env.branchName }}'
 
-    - name: 'Power ALM Export action Checkout'
-      uses: actions/checkout@v2-beta
-      with:
-        repository: poweralm/export
-        ref: refs/heads/master
-        token: ${{ env.POWER_PLATFORM_ACTIONS_SECRET }}
-        path: .github/export
-
-    - name: 'Power ALM Import action Checkout'
-      uses: actions/checkout@v2-beta
-      with:
-        repository: poweralm/import
-        ref: refs/heads/master
-        token: ${{ env.POWER_PLATFORM_ACTIONS_SECRET }}
-        path: .github/import
-
-    - name: 'Power ALM Pack Checkout'
-      uses: actions/checkout@v2-beta
-      with:
-        repository: poweralm/pack
-        ref: refs/heads/master
-        token: ${{ env.POWER_PLATFORM_ACTIONS_SECRET }}
-        path: .github/pack
-
-    - name: 'Power ALM Unpack Checkout'
-      uses: actions/checkout@v2-beta
-      with:
-        repository: poweralm/unpack
-        ref: refs/heads/master
-        token: ${{ env.POWER_PLATFORM_ACTIONS_SECRET }}
-        path: .github/unpack
-
-    - name: 'Export the Power Solution from Dev Environment'
-      id: export-dev
-      uses: ./.github/export
-      with:
-        connectionString: '${{ env.DEV_ENV_CONNECTION_STRING }}'
-        solutionName: ${{env.SolutionName}}
-        ExportSolutionOutputPath: 'exported_unmanaged'
-        packageType: 'Unmanaged'
-    
-    - name: 'Unpack the power solution'
-      id: unpack-dev
-      uses: ./.github/unpack
-      with:
-        UnpackedFilesFolder: ${{env.SolutionName}}
-        SolutionName: ${{env.SolutionName}}
-        solutionFile: 'exported_unmanaged\${{env.SolutionName}}.zip'
-
-    - name: "commit the unpacked solution to the branch"
+    # Github api create-a-repository-dispatch-event doesn't allow more than 10 properties in the client_payload
+    # Hence we are using a request object inside a client_payload to take additional properties.
+    # This step can be ignored if using the workflow based on the default events.
+    - name: 'Parsing the request from event client_payload'
+      id: parse-client-payload-request
       run: |
-        $SolutionName= echo ${{env.SolutionName}}
-        $branchName = echo ${{ env.branchName }}
-        $commitMessage = echo "${{env.notes}}"
-        if ($null -eq $commitMessage -or $commitMessage -eq "") {
-          $commitMessage = "Committing unpacked solution"
+        $requestPayload = echo "${{ github.event.client_payload.request }}"
+        $requestPayloadObj = $requestPayload | ConvertFrom-Json
+        $hashProperties = @{}
+        foreach ($property in $requestPayloadObj.PSObject.Properties) {
+          echo "$($property.Name) :: $($property.value)"
+          $hashProperties[$property.Name] = $property.Value
         }
-        git fetch 
-        git config --global user.name 'Admin'
-        git config --global user.email 'Admin@users.noreply.github.com'
-        echo "Fetch done"
-        git add --all $SolutionName/**
-        echo "Add done"
-        git status -v 
-        echo "Status done"
-        git commit -m $commitMessage
-        echo "Commit done"
-        git push --force 
-        echo "Push Done"
-        Write-Host "There's an issue in windows : the git doesn't exit cleanly. Hence exit code 1."
-      continue-on-error: true
 
-    - name: 'Pack the Solution'
-      id: pack-dev
-      uses: ./.github/pack
+        echo "::set-env name=buildEnvironmentUserId::$($hashProperties.buildenvironmentuserid)"
+        echo "::set-env name=buildEnvironmentSecretName::$($hashProperties.buildenvironmentsecretname)"
+        echo "::set-env name=buildEnvironmentUrl::$($hashProperties.buildenvironmenturl)"
+        echo "::set-env name=requestId::$($hashProperties.requestid)"
+        echo "::set-env name=projectId::$($hashProperties.projectId)"
+        echo "::set-env name=notes::$($hashProperties.notes)"
+
+    # This step will go away after the microsoft/powerplatform-actions repo becomes public.
+    - name: 'Power Platform Microsoft actions'
+      uses: actions/checkout@v2-beta
       with:
-        PackageType: 'Unmanaged'
-        unpackedFilesFolder: ${{env.SolutionName}}
-        OutputPath: 'packed'
+        repository: microsoft/powerplatform-actions
+        ref: refs/heads/main # will change later to refs/tags/v0.1.7
+        token: ${{ env.microsoftPowerPlatformActionsSecret }}
+        path: microsoft/powerplatform-actions
+        lfs: true
+
+    - name: 'Export the solution from Dev (source) environment'
+      id: export-dev
+      uses: ./microsoft/powerplatform-actions/export-solution
+      with:
+        user-name: ${{ env.sourceEnvironmentUserId }}
+        password-secret: ${{ secrets[env.sourceEnvironmentSecretName] }}
+        solution-name: ${{ env.solutionName }}
+        environment-url: ${{ env.sourceEnvironmentUrl }}
+        solution-output-file: "${{ env.solutionName }}.zip"
+
+    - name: 'Unpack the exported solution'
+      id: unpack-dev
+      uses: ./microsoft/powerplatform-actions/unpack-solution
+      with:
+        solution-file: "${{ env.solutionName }}.zip"
+        solution-folder: "${{ env.solutionName }}"
+
+    - name: 'Commit the unpacked solution to the topic branch'
+      id: branch-solution
+      uses: ./microsoft/powerplatform-actions/branch-solution
+      with:
+       solution-folder: "${{ env.solutionName }}"
+       solution-target-folder: "${{ env.solutionName }}"
+       repo-token: ${{ secrets.GITHUB_TOKEN }}
+       branch-name: ${{ env.branchName }}
+       clobber-branch: true
+       allow-empty-commit: true
+
+    - name: 'Pack the solution for testing in build environment'
+      id: pack-dev
+      uses: ./microsoft/powerplatform-actions/pack-solution
+      with:
+        solution-folder: ${{env.solutionName}}
+        solution-file: "${{env.solutionName}}_Unmanaged.zip"
 
     - name: 'Import the solution to Build Environment'
       id: import-build
-      uses: ./.github/import
+      uses: ./microsoft/powerplatform-actions/import-solution
       with:
-        ConnectionString: '${{ env.BUILD_ENV_CONNECTION_STRING }}'
-        SolutionFile: 'packed\${{ env.SolutionName }}.zip'
+        environment-url: ${{ env.buildEnvironmentUrl }}
+        user-name: ${{ env.buildEnvironmentUserId }}
+        password-secret: ${{ secrets[env.buildEnvironmentSecretName] }}
+        solution-file: "${{env.solutionName}}_Unmanaged.zip"
 
-    - name: 'Export the solution as managed from build Environment'
+    - name: 'Export the solution as managed from build environment'
       id: export-build
-      uses: ./.github/export
+      uses: ./microsoft/powerplatform-actions/export-solution
       with:
-        connectionString: '${{ env.BUILD_ENV_CONNECTION_STRING }}'
-        solutionName: ${{env.SolutionName}}
-        packageType: 'Managed'
-        ExportSolutionOutputPath: 'exported_managed'
+        user-name: ${{ env.buildEnvironmentUserId }}
+        password-secret: ${{ secrets[env.buildEnvironmentSecretName] }}
+        solution-name: ${{ env.solutionName }}
+        environment-url: ${{ env.buildEnvironmentUrl }}
+        managed: 'true'
+        solution-output-file: "${{ env.solutionName }}_managed.zip"
 
-    - name: 'Import the managed solution to the Test Environment'
-      id: import-uat
-      uses: ./.github/import
+    - name: 'Import the managed solution to the Test (target) Environment'
+      id: import-test
+      uses: ./microsoft/powerplatform-actions/import-solution
       with:
-        ConnectionString: '${{ env.TEST_ENV_CONNECTION_STRING }}'
-        SolutionFile: 'exported_managed\${{env.SolutionName}}_managed.zip'
+        environment-url: ${{ env.targetEnvironmentUrl }}
+        user-name: ${{ env.targetEnvironmentUserId }}
+        password-secret: ${{ secrets[env.targetEnvironmentSecretName] }}
+        solution-file: "${{ env.solutionName }}_managed.zip"
 
     - name: 'Upload the managed solution to artifact'
       uses: actions/upload-artifact@v2
       with:
         name: ${{env.SolutionName}}
-        path: 'exported_managed\${{env.SolutionName}}_managed.zip'
+        path: "${{ env.solutionName }}_managed.zip"
 
-    - name: Set job status
+    # Reading the different power platform action status to upload the status as artifact, to easily communicate it using other jobs.
+    - name: Save job status to a file (status.json)
       if: always()
       run: |
-        $exportDev = echo "${{ steps.export-dev.outputs.errorMessage }}"
-        $unpackDev = echo "${{ steps.unpack-dev.outputs.errorMessage }}"
-        $packDev = echo "${{ steps.pack-dev.outputs.errorMessage }}"
-        $importBuild = echo "${{ steps.import-build.outputs.errorMessage }}"
-        $exportBuild = echo "${{ steps.export-build.outputs.errorMessage }}"
-        $importUat = echo "${{ steps.import-uat.outputs.errorMessage }}"
-        $errors = @{
-          'ExportAction-Dev'="$exportDev";
-          'UnpackAction-Dev'="$unpackDev";
-          'PackAction-Dev'="$packDev";
-          'ImportAction-Build'="$importBuild";
-          'ExportAction-Build'="$exportBuild";
-          'ImportAction-Test'="$importUat";
+        $errors=@{}
+        function Process-StepOutputs($stepName, $outCome, $errorMessage) {
+          if ($outcome -eq "success" -or $outcome -eq "skipped") {
+            return ""
+          } else {
+            if ($null -ne $errorMessage -or $errorMessage -ne "") {
+              $errors["$stepName"] = $errorMessage
+            }
+          }
         }
+
+        $outCome = echo "${{ steps.export-dev.outcome }}"
+        $errorMsg = echo "${{ steps.export-dev.outputs.errorMessage }}"
+        Process-StepOutputs "export-dev" $outCome $errorMsg
+
+        $outCome = echo "${{ steps.unpack-dev.outcome }}"
+        $errorMsg = echo "${{ steps.unpack-dev.outputs.errorMessage }}"
+        Process-StepOutputs "unpack-dev" $outCome $errorMsg
+        
+        $outCome = echo "${{ steps.pack-dev.outcome }}"
+        $errorMsg = echo "${{ steps.pack-dev.outputs.errorMessage }}"
+        Process-StepOutputs "pack-dev" $outCome $errorMsg
+
+        $outCome = echo "${{ steps.import-build.outcome }}"
+        $errorMsg = echo "${{ steps.import-build.outputs.errorMessage }}"
+        Process-StepOutputs "import-build" $outCome $errorMsg
+
+        $outCome = echo "${{ steps.export-build.outcome }}"
+        $errorMsg = echo "${{ steps.export-build.outputs.errorMessage }}"
+        Process-StepOutputs "export-build" $outCome $errorMsg
+
+        $outCome = echo "${{ steps.import-test.outcome }}"
+        $errorMsg = echo "${{ steps.import-test.outputs.errorMessage }}"
+        Process-StepOutputs "import-test" $outCome $errorMsg
+
         $jobStatus = echo ${{ job.status }}
         $workflow = echo ${{ github.workflow }}
         $branch = echo ${{ env.branchName }}
@@ -160,6 +182,7 @@ jobs:
         $run = echo ${{ github.run_id }}
         $requestId = echo ${{ env.requestId }}
         $projectid = echo "${{ env.projectId }}"
+        $errorStr = ConvertTo-Json -InputObject $errors
         $status = @{
           'status' = $jobStatus;
           'workflow' = "$workflow";
@@ -168,18 +191,21 @@ jobs:
           'run' = $run;
           'requestid' = $requestId;
           'projectid' = "$projectid";
-          'errors'= $errors
+          'errors'= "$errorStr"
         }
+
         $jsonString = ConvertTo-Json -InputObject $status
         $jsonString > status.json
 
-    - name: Update job status
+    - name: Upload job status file as artifact
       if: always()
       uses: actions/upload-artifact@v1
       with:
         name: job_status
         path: status.json
 
+  # This job is to notify the webhook url when the workflow is triggered on the custom event and the payload has the webhook url.
+  # Otherwise this job can be ignored.
   notify:
     needs: [build]
     if: always()

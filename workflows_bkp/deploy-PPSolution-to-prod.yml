@@ -1,8 +1,5 @@
 name: Deploy to Production Environment
 
-# Currently triggering this workflow on custom events, using the api https://docs.github.com/en/rest/reference/repos#create-a-repository-dispatch-event
-# Can be easily changed to other events https://docs.github.com/en/free-pro-team@latest/actions/reference/events-that-trigger-workflows 
-# NOTE: You have to change env variables with appropriate values, if you are modifying it.
 on:
  repository_dispatch:
    types: [deploy_to_prod]
@@ -11,14 +8,11 @@ jobs:
   build:
 
     env:
-     solutionName: ${{ github.event.client_payload.solutionname }}
+     SolutionName: ${{ github.event.client_payload.solutionname }}
+     prodCS: ${{ secrets.PROD_ENV_CONNECTION_STRING }}
      requestId: ${{ github.event.client_payload.requestid }}
+     POWER_PLATFORM_ACTIONS_SECRET: ${{ secrets.POWER_PLATFORM_ACTIONS_SECRET }}
      projectId: ${{ github.event.client_payload.projectid }}
-     targetEnvironmentUserId: ${{ github.event.client_payload.targetenvironmentuserid }}
-     targetEnvironmentSecretName: ${{ github.event.client_payload.targetenvironmentsecretname }}
-     targetEnvironmentUrl: ${{ github.event.client_payload.targetenvironmenturl }}
-     # this will go away once the repo:microsoft/powerplatform-actions is public
-     microsoftPowerPlatformActionsSecret: ${{ secrets.POWER_PLATFORM_ACTIONS_SECRET }}
 
     runs-on: windows-2019
 
@@ -26,15 +20,13 @@ jobs:
     - name: 'clone this repo'
       uses: actions/checkout@v2-beta
 
-    # This step will go away after the microsoft/powerplatform-actions repo becomes public.
-    - name: 'Power Platform Microsoft actions'
+    - name: 'Power ALM Import action Checkout'
       uses: actions/checkout@v2-beta
       with:
-        repository: microsoft/powerplatform-actions
-        ref: refs/heads/main # will change later to refs/tags/v0.1.7
-        token: ${{ env.microsoftPowerPlatformActionsSecret }}
-        path: microsoft/powerplatform-actions
-        lfs: true
+        repository: poweralm/import
+        ref: refs/heads/master
+        token: ${{ env.POWER_PLATFORM_ACTIONS_SECRET }}
+        path: .github/import
 
     - name: Download artifact
       uses: dawidd6/action-download-artifact@v2
@@ -43,30 +35,20 @@ jobs:
           # Required, workflow file name or ID
           workflow: deploy-PPSolution-to-test.yml
 
-    - name: 'Import the managed solution to the Prod (target) Environment'
-      id: import-test
-      uses: ./microsoft/powerplatform-actions/import-solution
+    - name: 'Import the solution to Prod Environment'
+      id: import
+      uses: ./.github/import
       with:
-        environment-url: ${{ env.targetEnvironmentUrl }}
-        user-name: ${{ env.targetEnvironmentUserId }}
-        password-secret: ${{ secrets[env.targetEnvironmentSecretName] }}
-        solution-file: '${{env.solutionName}}\${{env.solutionName}}_managed.zip'
-
-    # Reading the different power platform action status to upload the status as artifact, to easily communicate it using other jobs.
-    - name: Save job status to a file (status.json)
+        ConnectionString: '${{ env.prodCS }}'
+        SolutionFile: '${{env.SolutionName}}\${{env.SolutionName}}_managed.zip'
+    
+    - name: Set job status
       if: always()
       run: |
-        $errors=@{}
-        $outCome = echo "${{ steps.import-test.outputs.outcome }}"
-        $errorMessage = echo "${{ steps.import.outputs.errorMessage }}"
-        if ($outcome -eq "success" -or $outcome -eq "skipped") {
-            return ""
-          } else {
-            if ($null -ne $errorMessage -or $errorMessage -ne "") {
-              $errors["import-test"] = $errorMessage
-            }
-          }
-
+        $importError = echo "${{ steps.import.outputs.errorMessage }}"
+        $errors = @{
+          'ImportAction' = "$importError"
+        }
         $jobStatus = echo ${{ job.status }}
         $workflow = echo ${{ github.workflow }}
         $run = echo ${{ github.run_id }}
@@ -84,14 +66,12 @@ jobs:
         $jsonString = ConvertTo-Json -InputObject $status
         $jsonString > status.json
 
-    - name: Upload job status file as artifact
+    - name: Update job status
       uses: actions/upload-artifact@v1
       with:
         name: job_status
         path: status.json
-
-  # This job is to notify the webhook url when the workflow is triggered on the custom event and the payload has the webhook url.
-  # Otherwise this job can be ignored.
+  
   notify:
     needs: [build]
     if: always()
