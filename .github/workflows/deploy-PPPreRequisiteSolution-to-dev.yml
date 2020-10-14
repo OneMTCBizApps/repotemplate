@@ -176,7 +176,7 @@ jobs:
             'run' = $run;
             'requestid' = $requestId;
             'projectid' = "$projectid"
-            'errors' = $errors
+            'errors' = "$errors"
           }
           $jsonData = ConvertTo-Json -InputObject $status
           echo "Data constructed as status.json file is not present :: " $jsonData
