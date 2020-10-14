@@ -69,7 +69,7 @@ jobs:
 
     - name: 'Unpack the exported solution'
       id: unpack-dev
-      uses: microsoft/powerplatform-actions/unpack-solution
+      uses: microsoft/powerplatform-actions/unpack-solution@v0.1.7
       with:
         solution-file: "${{ env.solutionName }}.zip"
         solution-folder: "${{ env.solutionName }}"
