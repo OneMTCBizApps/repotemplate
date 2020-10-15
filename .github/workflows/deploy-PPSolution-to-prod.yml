@@ -62,6 +62,7 @@ jobs:
         $run = echo ${{ github.run_id }}
         $requestId = echo ${{ env.requestId }}
         $projectid = echo "${{ env.projectId }}"
+        $errorStr = ConvertTo-Json -InputObject $errors
         $status = @{
           'status' = $jobStatus;
           'workflow' = "$workflow";
@@ -69,7 +70,7 @@ jobs:
           'run' = $run;
           'requestid' = $requestId;
           'projectid' = "$projectid"
-          'errors' = $errors
+          'errors' = "$errorStr"
         }
         $jsonString = ConvertTo-Json -InputObject $status
         $jsonString > status.json
