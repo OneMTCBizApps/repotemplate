@@ -1,0 +1,45 @@
+name: Deploy solution to dev environment
+
+# Triggering this workflow on custom event "setup-dev-env"
+# This workflow will import the "Managed" solution from source(prod) environment to target(dev) environment
+# It is used to set up the dev environment from prod like environment.
+
+on:
+ repository_dispatch:
+   types: [setup-dev-env]
+
+jobs:
+  build:
+
+    env:
+     solutionName: ${{ github.event.client_payload.solutionname }}
+     sourcepasswordsecretname: ${{ github.event.client_payload.sourcepasswordsecretname }}
+     sourceusername: ${{ github.event.client_payload.sourceusername }}
+     sourceenvironmentUrl: ${{ github.event.client_payload.sourceenvironmenturl }}
+     targetpasswordsecretname: ${{ github.event.client_payload.targetpasswordsecretname }}
+     targetusername: ${{ github.event.client_payload.targetusername }}
+     targetenvironmentUrl: ${{ github.event.client_payload.targetenvironmenturl }}
+
+
+    runs-on: windows-2019
+
+    steps:
+    - name: 'Export the solution from source environment'
+      id: export-dev
+      uses: microsoft/powerplatform-actions/export-solution@main
+      with:
+        user-name: ${{ env.sourceusername }}
+        password-secret: ${{ secrets[env.sourcepasswordsecretname] }}
+        solution-name: ${{ env.solutionName }}
+        environment-url: ${{ env.sourceenvironmenturl }}
+        managed: 'true'
+        solution-output-file: "${{ env.solutionName }}_managed.zip"
+
+    - name: 'Import the solution to Target Environment'
+      id: import-build
+      uses: microsoft/powerplatform-actions/import-solution@main
+      with:
+        environment-url: ${{ env.targetenvironmenturl }}
+        user-name: ${{ env.targetusername }}
+        password-secret: ${{ secrets[env.targetpasswordsecretname] }}
+        solution-file: "${{env.solutionName}}_managed.zip"
