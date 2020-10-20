@@ -2,7 +2,7 @@ name: Setting_Dev_Environment
 
 on:
  repository_dispatch:
-   types: [setup-dev-env]
+   types: [setup-dev-env-oldevent]
 
 jobs:
   build:
