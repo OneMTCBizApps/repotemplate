@@ -26,8 +26,6 @@ jobs:
      buildEnvironmentUrl: ${{ github.event.client_payload.buildenvironmenturl }}
      requestId: ${{ github.event.client_payload.requestid }}
      projectId: ${{ github.event.client_payload.projectid }}
-     # this will go away once the repo:microsoft/powerplatform-actions is public
-     microsoftPowerPlatformActionsSecret: ${{ secrets.POWER_PLATFORM_ACTIONS_SECRET }}
 
     runs-on: windows-2019
 
@@ -49,12 +47,12 @@ jobs:
           $hashProperties[$property.Name] = $property.Value
         }
 
-        echo "::set-env name=buildEnvironmentUserId::$($hashProperties.buildenvironmentuserid)"
-        echo "::set-env name=buildEnvironmentSecretName::$($hashProperties.buildenvironmentsecretname)"
-        echo "::set-env name=buildEnvironmentUrl::$($hashProperties.buildenvironmenturl)"
-        echo "::set-env name=requestId::$($hashProperties.requestid)"
-        echo "::set-env name=projectId::$($hashProperties.projectId)"
-        echo "::set-env name=notes::$($hashProperties.notes)"
+        echo "buildEnvironmentUserId=$($hashProperties.buildenvironmentuserid)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "buildEnvironmentSecretName=$($hashProperties.buildenvironmentsecretname)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "buildEnvironmentUrl=$($hashProperties.buildenvironmenturl)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "requestId=$($hashProperties.requestid)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "projectId=$($hashProperties.projectId)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "notes=$($hashProperties.notes)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
 
     - name: 'Export the solution from Dev (source) environment'
@@ -96,19 +94,19 @@ jobs:
       id: import-build
       uses: microsoft/powerplatform-actions/import-solution@main
       with:
-        environment-url: ${{ env.buildEnvironmentUrl }}
-        user-name: ${{ env.buildEnvironmentUserId }}
-        password-secret: ${{ secrets[env.buildEnvironmentSecretName] }}
+        environment-url: ${{env.buildEnvironmentUrl}}
+        user-name: ${{env.buildEnvironmentUserId}}
+        password-secret: ${{env.buildEnvironmentSecretName}}
         solution-file: "${{env.solutionName}}_Unmanaged.zip"
 
     - name: 'Export the solution as managed from build environment'
       id: export-build
       uses: microsoft/powerplatform-actions/export-solution@main
       with:
-        user-name: ${{ env.buildEnvironmentUserId }}
-        password-secret: ${{ secrets[env.buildEnvironmentSecretName] }}
+        user-name: ${{env.buildEnvironmentUserId}}
+        password-secret: ${{env.buildEnvironmentSecretName}}
         solution-name: ${{ env.solutionName }}
-        environment-url: ${{ env.buildEnvironmentUrl }}
+        environment-url: ${{env.buildEnvironmentUrl}}
         managed: 'true'
         solution-output-file: "${{ env.solutionName }}_managed.zip"
 
@@ -171,8 +169,8 @@ jobs:
         $branch = echo ${{ env.branchName }}
         $repo = echo ${{ github.repository }}
         $run = echo ${{ github.run_id }}
-        $requestId = echo ${{ env.requestId }}
-        $projectid = echo "${{ env.projectId }}"
+        $requestId = echo "${{env.requestId}}"
+        $projectid = echo "${{env.projectId}}"
         $errorStr = ConvertTo-Json -InputObject $errors
         $status = @{
           'status' = $jobStatus;
