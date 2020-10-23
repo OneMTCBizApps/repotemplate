@@ -96,7 +96,7 @@ jobs:
       with:
         environment-url: ${{env.buildEnvironmentUrl}}
         user-name: ${{env.buildEnvironmentUserId}}
-        password-secret: ${{env.buildEnvironmentSecretName}}
+        password-secret: ${{ secrets[env.buildEnvironmentSecretName] }}
         solution-file: "${{env.solutionName}}_Unmanaged.zip"
 
     - name: 'Export the solution as managed from build environment'
@@ -104,7 +104,7 @@ jobs:
       uses: microsoft/powerplatform-actions/export-solution@main
       with:
         user-name: ${{env.buildEnvironmentUserId}}
-        password-secret: ${{env.buildEnvironmentSecretName}}
+        password-secret: ${{ secrets[env.buildEnvironmentSecretName] }}
         solution-name: ${{ env.solutionName }}
         environment-url: ${{env.buildEnvironmentUrl}}
         managed: 'true'
