@@ -17,8 +17,6 @@ jobs:
      targetEnvironmentUserId: ${{ github.event.client_payload.targetenvironmentuserid }}
      targetEnvironmentSecretName: ${{ github.event.client_payload.targetenvironmentsecretname }}
      targetEnvironmentUrl: ${{ github.event.client_payload.targetenvironmenturl }}
-     # this will go away once the repo:microsoft/powerplatform-actions is public
-     microsoftPowerPlatformActionsSecret: ${{ secrets.POWER_PLATFORM_ACTIONS_SECRET }}
 
     runs-on: windows-2019
 
@@ -34,7 +32,7 @@ jobs:
           workflow: deploy-PPSolution-to-test.yml
 
     - name: 'Import the managed solution to the Prod (target) Environment'
-      id: import-test
+      id: import-prod
       uses: microsoft/powerplatform-actions/import-solution@main
       with:
         environment-url: ${{ env.targetEnvironmentUrl }}
@@ -53,7 +51,9 @@ jobs:
             return ""
           } else {
             if ($null -ne $errorMessage -or $errorMessage -ne "") {
-              $errors["import-test"] = $errorMessage
+              $errors["import-prod"] = $errorMessage
+            } else {
+              $errors["import-prod"] = "error occured in import-prod github action"
             }
           }
 

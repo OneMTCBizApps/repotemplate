@@ -136,6 +136,8 @@ jobs:
           } else {
             if ($null -ne $errorMessage -or $errorMessage -ne "") {
               $errors["$stepName"] = $errorMessage
+            } else {
+              $errors["$stepName"] = "Error occured in GitHub action $stepName"
             }
           }
         }
