@@ -50,7 +50,7 @@ jobs:
         if ($outcome -eq "success" -or $outcome -eq "skipped") {
             return ""
           } else {
-            if ($null -ne $errorMessage -or $errorMessage -ne "") {
+            if ($null -ne $errorMessage -and $errorMessage -ne "") {
               $errors["import-prod"] = $errorMessage
             } else {
               $errors["import-prod"] = "error occured in import-prod github action"
