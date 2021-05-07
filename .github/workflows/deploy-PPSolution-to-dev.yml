@@ -45,6 +45,7 @@ jobs:
         user-name: ${{ env.targetusername }}
         password-secret: ${{ secrets[env.targetpasswordsecretname] }}
         solution-file: "${{env.solutionName}}_managed.zip"
+        run-asynchronously: true
 
     - name: Set job status
       if: always()
