@@ -98,6 +98,7 @@ jobs:
         user-name: ${{env.buildEnvironmentUserId}}
         password-secret: ${{ secrets[env.buildEnvironmentSecretName] }}
         solution-file: "${{env.solutionName}}_Unmanaged.zip"
+        run-asynchronously: true
 
     - name: 'Export the solution as managed from build environment'
       id: export-build
@@ -118,6 +119,7 @@ jobs:
         user-name: ${{ env.targetEnvironmentUserId }}
         password-secret: ${{ secrets[env.targetEnvironmentSecretName] }}
         solution-file: "${{ env.solutionName }}_managed.zip"
+        run-asynchronously: true
 
     - name: 'Upload the managed solution to artifact'
       uses: actions/upload-artifact@v2
